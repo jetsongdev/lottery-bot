@@ -1,6 +1,7 @@
 import os
 import sys
 from dotenv import load_dotenv
+from typing import Optional
 
 import auth
 import lotto645
@@ -64,8 +65,8 @@ def check_winning_win720(authCtrl: auth.AuthController) -> dict:
     item['balance'] = authCtrl.get_user_balance()
     return item
 
-def send_message(mode: int, lottery_type: int, response: dict, webhook_url: str,
-                 telegram_bot_token: str = None, telegram_chat_id: str = None):
+def send_message(mode: int, lottery_type: int, response: dict, webhook_url: Optional[str],
+                 telegram_bot_token: Optional[str] = None, telegram_chat_id: Optional[str] = None):
     notify = notification.Notification()
 
     if mode == 0:

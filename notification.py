@@ -143,7 +143,7 @@ class Notification:
         attempted = []
         sent = False
         if webhook_url:
-            attempted.append("Discord")
+            attempted.append("Webhook")
             if self._send_discord_webhook(webhook_url, message):
                 sent = True
         if telegram_bot_token and telegram_chat_id:
@@ -161,7 +161,7 @@ class Notification:
             response.raise_for_status()
             return True
         except requests.exceptions.RequestException as e:
-            print(f"[Error] Discord 전송 실패: {e}")
+            print(f"[Error] Webhook 전송 실패: {e}")
             return False
 
     def _send_telegram_message(self, bot_token: str, chat_id: str, message: str) -> bool:
@@ -186,7 +186,7 @@ class Notification:
         parts = []
         last_end = 0
 
-        for m in re.finditer(r'```\w*\n?(.*?)```', message, flags=re.DOTALL):
+        for m in re.finditer(r'```(?:\w+\n)?(.*?)```', message, flags=re.DOTALL):
             text_part = self._format_text_segment(message[last_end:m.start()])
             parts.append(text_part)
             parts.append(f"<pre>{html.escape(m.group(1))}</pre>")
