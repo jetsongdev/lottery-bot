@@ -1,10 +1,13 @@
 import html
 import requests
 import re
+from typing import Optional
+
 
 class Notification:
-    def send_lotto_buying_message(self, body: dict, webhook_url: str = None,
-                                  telegram_bot_token: str = None, telegram_chat_id: str = None) -> None:
+    def send_lotto_buying_message(self, body: dict, webhook_url: Optional[str] = None,
+                                  telegram_bot_token: Optional[str] = None,
+                                  telegram_chat_id: Optional[str] = None) -> None:
         result = body.get("result", {})
         if result.get("resultMsg", "FAILURE").upper() != "SUCCESS":
             message = f"로또 구매 실패 (`{result.get('resultMsg', 'Unknown Error')}`) 남은잔액 : {body.get('balance', '확인불가')}"
@@ -24,8 +27,9 @@ class Notification:
 
         return lotto_number
 
-    def send_win720_buying_message(self, body: dict, webhook_url: str = None,
-                                   telegram_bot_token: str = None, telegram_chat_id: str = None) -> None:
+    def send_win720_buying_message(self, body: dict, webhook_url: Optional[str] = None,
+                                   telegram_bot_token: Optional[str] = None,
+                                   telegram_chat_id: Optional[str] = None) -> None:
         if body.get("resultCode") != '100':
             message = f"연금복권 구매 실패 (`{body.get('resultMsg', 'Unknown Error')}`) 남은잔액 : {body.get('balance', '확인불가')}"
             self._dispatch(webhook_url, telegram_bot_token, telegram_chat_id, message)
@@ -53,8 +57,9 @@ class Notification:
             formatted_numbers.append(formatted_number)
         return "\n".join(formatted_numbers)
 
-    def send_lotto_winning_message(self, winning: dict, webhook_url: str = None,
-                                   telegram_bot_token: str = None, telegram_chat_id: str = None) -> None:
+    def send_lotto_winning_message(self, winning: dict, webhook_url: Optional[str] = None,
+                                   telegram_bot_token: Optional[str] = None,
+                                   telegram_chat_id: Optional[str] = None) -> None:
         assert type(winning) == dict
 
         balance_str = winning.get('balance', '확인불가')
@@ -102,8 +107,9 @@ class Notification:
             self._dispatch(webhook_url, telegram_bot_token, telegram_chat_id, message)
             return
 
-    def send_win720_winning_message(self, winning: dict, webhook_url: str = None,
-                                    telegram_bot_token: str = None, telegram_chat_id: str = None) -> None:
+    def send_win720_winning_message(self, winning: dict, webhook_url: Optional[str] = None,
+                                    telegram_bot_token: Optional[str] = None,
+                                    telegram_chat_id: Optional[str] = None) -> None:
         assert type(winning) == dict
 
         balance_str = winning.get('balance', '확인불가')
@@ -132,16 +138,22 @@ class Notification:
             message = f"연금복권 - 다음 기회에... 🫠 (남은잔액 : {balance_str})"
             self._dispatch(webhook_url, telegram_bot_token, telegram_chat_id, message)
 
-    def _dispatch(self, webhook_url: str, telegram_bot_token: str, telegram_chat_id: str, message: str) -> None:
+    def _dispatch(self, webhook_url: Optional[str], telegram_bot_token: Optional[str],
+                  telegram_chat_id: Optional[str], message: str) -> None:
+        attempted = []
         sent = False
         if webhook_url:
+            attempted.append("Discord")
             if self._send_discord_webhook(webhook_url, message):
                 sent = True
         if telegram_bot_token and telegram_chat_id:
+            attempted.append("Telegram")
             if self._send_telegram_message(telegram_bot_token, telegram_chat_id, message):
                 sent = True
-        if not sent:
+        if not attempted:
             print(f"[Info] 알림 수단 없음. Message: {message}")
+        elif not sent:
+            print(f"[Error] 모든 알림 전송 실패 ({', '.join(attempted)}). Message: {message}")
 
     def _send_discord_webhook(self, webhook_url: str, message: str) -> bool:
         try:
@@ -168,12 +180,23 @@ class Notification:
             return False
 
     def _to_telegram_html(self, message: str) -> str:
-        # fenced code blocks (```lang\n...\n``` or ```\n...\n```)  → <pre>
-        def replace_code_block(m):
-            return f"<pre>{html.escape(m.group(1))}</pre>"
-        result = re.sub(r'```\w*\n?(.*?)```', replace_code_block, message, flags=re.DOTALL)
-        # *bold* → <b>bold</b>
-        result = re.sub(r'\*([^*\n]+)\*', r'<b>\1</b>', result)
-        # Discord emoji code → Unicode
-        result = result.replace(':moneybag:', '💰')
-        return result
+        # Process text segments and code blocks separately so that:
+        # - code block content is HTML-escaped but not bold-converted
+        # - non-code text is HTML-escaped and bold-converted
+        parts = []
+        last_end = 0
+
+        for m in re.finditer(r'```\w*\n?(.*?)```', message, flags=re.DOTALL):
+            text_part = self._format_text_segment(message[last_end:m.start()])
+            parts.append(text_part)
+            parts.append(f"<pre>{html.escape(m.group(1))}</pre>")
+            last_end = m.end()
+
+        parts.append(self._format_text_segment(message[last_end:]))
+        return ''.join(parts)
+
+    def _format_text_segment(self, text: str) -> str:
+        text = html.escape(text)
+        text = re.sub(r'\*([^*\n]+)\*', r'<b>\1</b>', text)
+        text = text.replace(':moneybag:', '💰')
+        return text
