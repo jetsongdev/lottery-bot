@@ -1,3 +1,6 @@
+[![Buy lotto](https://github.com/jetsongdev/lottery-bot/actions/workflows/buy_lotto.yml/badge.svg)](https://github.com/jetsongdev/lottery-bot/actions/workflows/buy_lotto.yml)
+[![Check Winning](https://github.com/jetsongdev/lottery-bot/actions/workflows/check_winning.yml/badge.svg)](https://github.com/jetsongdev/lottery-bot/actions/workflows/check_winning.yml)
+
 # 소개 
 
 동행복권 사이트내에 계정에 예치금만 넣어두시면 이후 매주 로또와 연금복권을 구입하고 당첨을 체크하여 알려드려요!  
