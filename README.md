@@ -41,6 +41,10 @@
 
 > 봇으로 구매한 금액도 주당 한도에 포함됩니다.
 
+### Telegram 알림 예시
+
+![](./.github/images/telegram-screenshot.png)
+
 ### Telegram 설정 방법
 
 1. [@BotFather](https://t.me/BotFather) 에서 봇 생성 → `TELEGRAM_BOT_TOKEN` 발급
