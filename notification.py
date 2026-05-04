@@ -1,3 +1,4 @@
+import html
 import requests
 import re
 
@@ -134,24 +135,45 @@ class Notification:
     def _dispatch(self, webhook_url: str, telegram_bot_token: str, telegram_chat_id: str, message: str) -> None:
         sent = False
         if webhook_url:
-            self._send_discord_webhook(webhook_url, message)
-            sent = True
+            if self._send_discord_webhook(webhook_url, message):
+                sent = True
         if telegram_bot_token and telegram_chat_id:
-            self._send_telegram_message(telegram_bot_token, telegram_chat_id, message)
-            sent = True
+            if self._send_telegram_message(telegram_bot_token, telegram_chat_id, message):
+                sent = True
         if not sent:
             print(f"[Info] 알림 수단 없음. Message: {message}")
 
-    def _send_discord_webhook(self, webhook_url: str, message: str) -> None:
-        payload = {"content": message}
-        requests.post(webhook_url, json=payload)
+    def _send_discord_webhook(self, webhook_url: str, message: str) -> bool:
+        try:
+            response = requests.post(webhook_url, json={"content": message}, timeout=10)
+            response.raise_for_status()
+            return True
+        except requests.exceptions.RequestException as e:
+            print(f"[Error] Discord 전송 실패: {e}")
+            return False
 
-    def _send_telegram_message(self, bot_token: str, chat_id: str, message: str) -> None:
-        telegram_message = message.replace(":moneybag:", "💰")
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {
-            "chat_id": chat_id,
-            "text": telegram_message,
-            "parse_mode": "Markdown",
-        }
-        requests.post(url, json=payload)
+    def _send_telegram_message(self, bot_token: str, chat_id: str, message: str) -> bool:
+        try:
+            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+            payload = {
+                "chat_id": chat_id,
+                "text": self._to_telegram_html(message),
+                "parse_mode": "HTML",
+            }
+            response = requests.post(url, json=payload, timeout=10)
+            response.raise_for_status()
+            return True
+        except requests.exceptions.RequestException as e:
+            print(f"[Error] Telegram 전송 실패: {e}")
+            return False
+
+    def _to_telegram_html(self, message: str) -> str:
+        # fenced code blocks (```lang\n...\n``` or ```\n...\n```)  → <pre>
+        def replace_code_block(m):
+            return f"<pre>{html.escape(m.group(1))}</pre>"
+        result = re.sub(r'```\w*\n?(.*?)```', replace_code_block, message, flags=re.DOTALL)
+        # *bold* → <b>bold</b>
+        result = re.sub(r'\*([^*\n]+)\*', r'<b>\1</b>', result)
+        # Discord emoji code → Unicode
+        result = result.replace(':moneybag:', '💰')
+        return result
