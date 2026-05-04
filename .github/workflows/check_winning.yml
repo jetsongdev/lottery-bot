@@ -1,20 +1,20 @@
 name: Check Winning
 on:
   schedule:
-    - cron: 0 13 * * 6 # every Saturday on 10:00 PM (KST)
+    - cron: '0 13 * * 6' # every Saturday 22:00 KST (UTC 13:00)
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: [ubuntu-latest]
     name: Check Winning
-    steps:  
+    steps:
 
-      - uses: actions/checkout@v3    
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-          cache: 'pip' # caching pip dependencies
+          cache: 'pip'
       - run: pip install -r requirements.txt
 
       - name: Run Scripts
@@ -24,4 +24,6 @@ jobs:
           PASSWORD: ${{ secrets.PASSWORD }}
           COUNT: ${{ secrets.COUNT }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          DISCORD_WEBHOOK_URL:  ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
